@@ -1,0 +1,24 @@
+{
+  "name": "Programme Timer",
+  "short_name": "Timer",
+  "description": "Set start & end times — get alerted 5 mins before time is up.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#38bdf8",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "prefer_related_applications": false,
+  "scope": "./"
+}

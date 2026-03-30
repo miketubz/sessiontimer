@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Programme Timer</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <style>
+
+@media (max-width: 768px) {
+  .top-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  table {
+    width: 100%;
+    min-width: 100%; /* ← ADD THIS */
+    overflow-x: auto; /* ← ADD THIS */
+    display: block;
+    font-size: 0.85rem;
+  }
+
+  th, td {
+    padding: 6px 4px; /* ← reduce padding */
+    font-size: 0.8rem; /* ← reduce font */
+    display: block;
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid #334155;
+  }
+
+  thead {
+    display: none;
+  }
+
+  td:before {
+    content: attr(data-label);
+    font-weight: bold;
+    display: inline-block;
+    width: 40%;
+  }
+
+.btn-add, .btn-reset-all, .btn-install, .btn-autopilot {
+  width: 100%;
+  max-width: 280px;
+  padding: 12px;
+  font-size: 0.95rem;
+}
+
+
+  .timer-display {
+    font-size: 1rem;
+    min-width: 60px;
+  }
+
+  .duration-calc {
+    font-size: 0.8rem;
+  }
+
+  .status-badge {
+    font-size: 0.65rem;
+    padding: 2px 6px;
+  }
+
+  .btn-group {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .btn-start, .btn-pause, .btn-reset, .btn-delete {
+    width: 100%;
+    padding: 4px; /* ← reduce */
+    font-size: 0.75rem; /* ← reduce */
+  }
+
+.mobile-hide {
+  display: none;
+}
+}
+
+/* ── Autopilot Button ── */
+.btn-autopilot {
+  background: #8b5cf6;
+  color: #fff;
+  font-weight: bold;
+  padding: 10px 24px;
+  font-size: 1rem;
+  border-radius: 8px;
+}
+.btn-autopilot:hover { background: #7c3aed; }
+.btn-autopilot.active { background: #6d28d9; }
+
+/* ── Autopilot Badge ── */
+#autopilotBadge {
+  display: none;
+  text-align: center;
+  margin-bottom: 14px;
+  animation: fadeInDown 0.3s ease;
+}
+#autopilotBadge span {
+  background: #4c1d95;
+  color: #c4b5fd;
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border: 1px solid #7c3aed;
+}
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Modal Overlay ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 10000;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+.modal-overlay.open {
+  display: flex;
+}
+
+/* ── Modal Box ── */
+.modal-box {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  padding: 28px 24px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  color: #e2e8f0;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal-box h2 {
+  color: #38bdf8;
+  margin-bottom: 16px;
+  font-size: 1.2rem;
+  text-align: center;
+}
+.modal-box p {
+  color: #94a3b8;
+  font-size: 0.88rem;
+  margin-bottom: 16px;
+  text-align: center;
+  line-height: 1.5;
+}
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.modal-close:hover { color: #e2e8f0; }
+
+/* ── Interval Input Row ── */
+.interval-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+.interval-row input[type="number"] {
+  flex: 1;
+  background: #0f172a;
+  border: 1px solid #475569;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 1rem;
+}
+.interval-row select {
+  background: #0f172a;
+  border: 1px solid #475569;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.interval-error {
+  color: #f87171;
+  font-size: 0.82rem;
+  text-align: center;
+  margin-bottom: 12px;
+  min-height: 18px;
+}
+
+/* ── Modal Buttons ── */
+.modal-btn-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.modal-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.modal-btn-primary {
+  background: #8b5cf6;
+  color: #fff;
+}
+.modal-btn-primary:hover { background: #7c3aed; }
+.modal-btn-danger {
+  background: #ef4444;
+  color: #fff;
+}
+.modal-btn-danger:hover { background: #dc2626; }
+.modal-btn-secondary {
+  background: #334155;
+  color: #e2e8f0;
+}
+.modal-btn-secondary:hover { background: #475569; }
+
+/* ── Help Button (fixed, bottom-right) ── */
+#helpBtn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #334155;
+  color: #94a3b8;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border: 2px solid #475569;
+  cursor: pointer;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  transition: all 0.2s;
+}
+#helpBtn:hover {
+  background: #475569;
+  color: #e2e8f0;
+  border-color: #38bdf8;
+}
+
+/* ── README Modal Content ── */
+.readme-section {
+  margin-bottom: 18px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 14px;
+}
+.readme-section:last-of-type {
+  border-bottom: none;
+}
+.readme-section h3 {
+  color: #38bdf8;
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+}
+.readme-section p {
+  color: #94a3b8;
+  font-size: 0.83rem;
+  text-align: left;
+  margin-bottom: 0;
+  line-height: 1.6;
+}
+.readme-footer {
+  text-align: center;
+  margin-top: 18px;
+  color: #475569;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+}
+.readme-footer span {
+  color: #38bdf8;
+  font-weight: bold;
+}
+
+/* ── Mobile adjustments for modals ── */
+@media (max-width: 768px) {
+  .modal-box {
+    padding: 20px 16px;
+    max-width: 100%;
+  }
+  .modal-btn {
+    width: 100%;
+    text-align: center;
+  }
+  #helpBtn {
+    bottom: 16px;
+    right: 16px;
+    width: 38px;
+    height: 38px;
+    font-size: 1rem;
+  }
+}
+
+/* Hide the floating Install App button visually but keep it functional */
+#installButton {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    h1 {
+      text-align: center;
+      color: #38bdf8;
+      margin-bottom: 8px;
+      font-size: 1.8rem;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      margin-bottom: 24px;
+      font-size: 0.9rem;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      padding: 8px 16px;
+      transition: all 0.2s;
+    }
+    .btn-add {
+      background: #38bdf8;
+      color: #0f172a;
+      font-weight: bold;
+      padding: 10px 24px;
+      font-size: 1rem;
+    }
+    .btn-add:hover { background: #7dd3fc; }
+    .btn-reset-all {
+      background: #ef4444;
+      color: #fff;
+      font-weight: bold;
+      padding: 10px 24px;
+      font-size: 1rem;
+    }
+    .btn-reset-all:hover { background: #dc2626; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #1e293b;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    thead tr {
+      background: #0f4c75;
+      color: #38bdf8;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid #334155;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr.row-warning {
+      background: #7c2d12 !important;
+      animation: pulse 1s infinite;
+    }
+    tbody tr.row-running { background: #14532d !important; }
+    tbody tr.row-finished { background: #1e1b4b !important; opacity: 0.7; }
+    tbody tr.row-paused { background: #292524 !important; }
+    @keyframes pulse {
+      0%, 100% { background: #7c2d12; }
+      50% { background: #991b1b; }
+    }
+    input[type="text"], input[type="time"] {
+      background: #0f172a;
+      border: 1px solid #475569;
+      color: #e2e8f0;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 0.85rem;
+      width: 100%;
+    }
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      cursor: pointer;
+    }
+    input:focus { outline: none; border-color: #38bdf8; }
+    .timer-display {
+      font-size: 1.2rem;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+      color: #38bdf8;
+      min-width: 80px;
+      display: inline-block;
+    }
+    .timer-display.warning-text { color: #f97316; }
+    .timer-display.finished-text { color: #a78bfa; }
+    .duration-calc {
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #38bdf8;
+      font-family: 'Courier New', monospace;
+      text-align: center;
+    }
+    .btn-start  { background: #22c55e; color: #fff; padding: 6px 12px; }
+    .btn-start:hover  { background: #16a34a; }
+    .btn-pause  { background: #f59e0b; color: #fff; padding: 6px 12px; }
+    .btn-pause:hover  { background: #d97706; }
+    .btn-reset  { background: #64748b; color: #fff; padding: 6px 12px; }
+    .btn-reset:hover  { background: #475569; }
+    .btn-delete { background: #ef4444; color: #fff; padding: 6px 10px; }
+    .btn-delete:hover { background: #dc2626; }
+    .btn-group { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .badge-idle     { background: #334155; color: #94a3b8; }
+    .badge-running  { background: #14532d; color: #4ade80; }
+    .badge-warning  { background: #7c2d12; color: #fb923c; }
+    .badge-paused   { background: #422006; color: #fbbf24; }
+    .badge-finished { background: #1e1b4b; color: #a78bfa; }
+    .warning-banner {
+      display: none;
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ef4444;
+      color: white;
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      z-index: 9999;
+      box-shadow: 0 4px 20px rgba(239,68,68,0.6);
+      text-align: center;
+      white-space: nowrap;
+    }
+    @keyframes slideDown {
+      from { top: -60px; opacity: 0; }
+      to   { top: 20px;  opacity: 1; }
+    }
+    .banner-show { animation: slideDown 0.3s ease forwards; }
+
+.btn-install {
+  background: #6b7280;
+  color: #fff;
+  font-weight: bold;
+  padding: 10px 24px;
+  font-size: 1rem;
+}
+.btn-install:hover { background: #4b5563; }
+  </style>
+</head>
+
+
+<body>
+
+<!-- ── Autopilot Badge ── -->
+<div id="autopilotBadge">
+  <span>🤖 Autopilot Running...</span>
+</div>
+
+
+<h1>📋 Programme Timer <br><span style="font-size:0.55rem; color:#64748b; font-weight:400; letter-spacing:2px; vertical-align:middle;">by mike_tubel</span></h1>
+<p class="subtitle">Set start & end time — duration auto-calculates. Get alerted 5 mins before time is up.</p>
+
+<div class="top-bar">
+  <button class="btn-add" onclick="addRow()">+ Add Programme</button>
+  <button class="btn-reset-all" onclick="resetAll()">↺ Reset Programme</button>
+  <button class="btn-autopilot" id="autopilotBtn" onclick="handleAutopilot()">🤖 Autopilot</button>
+  <button class="btn-install" onclick="promptInstall()" style="background:#6b7280; color:#fff; padding:10px 24px;">📲 Install App</button>
+</div>
+
+<table>
+ <thead>
+  <tr>
+    <th style="width:4%">#</th>
+    <th style="width:12%">Start Time</th>
+    <th style="width:12%">End Time</th>
+    <th style="width:18%">Title</th>
+    <th style="width:10%">Duration</th>
+    <th style="width:13%">Timer</th>
+    <th style="width:10%">Status</th>
+    <th style="width:21%">Actions</th>
+  </tr>
+</thead>
+  <tbody id="tableBody"></tbody>
+</table>
+
+
+<!-- ── Autopilot Interval Modal ── -->
+<div class="modal-overlay" id="autopilotModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('autopilotModal')">✕</button>
+    <h2>🤖 Autopilot Setup</h2>
+    <p>Set the interval delay between each row after the previous one finishes.</p>
+    <div class="interval-row">
+      <input type="number" id="intervalValue" min="1" max="999" placeholder="e.g. 5" value="5"/>
+      <select id="intervalUnit">
+        <option value="seconds">Seconds</option>
+        <option value="minutes" selected>Minutes</option>
+        <option value="hours">Hours</option>
+      </select>
+    </div>
+    <div class="interval-error" id="intervalError"></div>
+    <div class="modal-btn-row">
+      <button class="modal-btn modal-btn-secondary" onclick="closeModal('autopilotModal')">Cancel</button>
+      <button class="modal-btn modal-btn-primary" onclick="confirmAutopilot()">🚀 Start Autopilot</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Autopilot Cancel/Continue Modal ── -->
+<div class="modal-overlay" id="autopilotRunningModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('autopilotRunningModal')">✕</button>
+    <h2>🤖 Autopilot is Running</h2>
+    <p>Do you want to cancel or continue the current autopilot session?</p>
+    <div class="modal-btn-row">
+      <button class="modal-btn modal-btn-danger" onclick="cancelAutopilot()">✕ Cancel Autopilot</button>
+      <button class="modal-btn modal-btn-secondary" onclick="closeModal('autopilotRunningModal')">▶ Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Help / README Modal ── -->
+<div class="modal-overlay" id="helpModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('helpModal')">✕</button>
+    <h2>📋 Programme Timer — Help</h2>
+    <div class="readme-section">
+      <h3>➕ Add Programme</h3>
+      <p>Adds a new row to the table. Each row represents one programme or segment with its own start time, end time, title, and timer.</p>
+    </div>
+    <div class="readme-section">
+      <h3>↺ Reset Programme</h3>
+      <p>Clears all start times, end times, and titles from every row. All timers are reset to idle state.</p>
+    </div>
+    <div class="readme-section">
+      <h3>⏱ Start / Pause / Reset (per row)</h3>
+      <p>Each row has its own controls. Set a start and end time first — the duration auto-calculates. Press Start to begin the countdown. You will be alerted 5 minutes before time is up with a sound and banner.</p>
+    </div>
+    <div class="readme-section">
+      <h3>🤖 Autopilot</h3>
+      <p>Automatically starts each row in sequence. Set an interval delay (1 second to 6 hours) between rows. Rows without a set time are skipped. Click Autopilot again while running to cancel or continue.</p>
+    </div>
+    <div class="readme-section">
+      <h3>📲 Install App</h3>
+      <p>Installs Programme Timer as a standalone app on your device (Android/Desktop). The Install button appears once your browser detects the app is ready to install.</p>
+    </div>
+    <div class="readme-footer">
+      A project by <span>Mike Tubel</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Help Button (fixed bottom-right) ── -->
+<button id="helpBtn" onclick="openModal('helpModal')" title="Help">?</button>
+
+
+<div class="warning-banner" id="warningBanner"></div>
+
+<script>
+  const defaultPrograms = [
+    { startTime: "", endTime: "", title: "" },
+    { startTime: "", endTime: "", title: "" },
+    { startTime: "", endTime: "", title: "" },
+    { startTime: "", endTime: "", title: "" },
+    { startTime: "", endTime: "", title: "" },
+    { startTime: "", endTime: "", title: "" },
+    { startTime: "", endTime: "", title: "" },
+    { startTime: "", endTime: "", title: "" },
+    { startTime: "", endTime: "", title: "" },
+    { startTime: "", endTime: "", title: "" },
+  ];
+
+  let programs = [];
+  let timers = {};
+  let nextId = 1;
+  let bannerTimeout = null;
+
+  function calcDuration(start, end) {
+    if (!start || !end) return 0;
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    const diff = (eh * 60 + em) - (sh * 60 + sm);
+    return diff > 0 ? diff : 0;
+  }
+
+  function formatTime(seconds) {
+    const m = Math.floor(Math.abs(seconds) / 60);
+    const s = Math.abs(seconds) % 60;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function showBanner(message) {
+    const banner = document.getElementById('warningBanner');
+    banner.textContent = message;
+    banner.style.display = 'block';
+    banner.classList.remove('banner-show');
+    void banner.offsetWidth;
+    banner.classList.add('banner-show');
+    if (bannerTimeout) clearTimeout(bannerTimeout);
+    bannerTimeout = setTimeout(() => {
+      banner.style.display = 'none';
+    }, 6000);
+  }
+
+  function initTimer(id, durationMinutes) {
+    if (!timers[id]) {
+      timers[id] = {
+        interval:  null,
+        remaining: durationMinutes * 60,
+        state:     'idle',
+        warned:    false
+      };
+    }
+  }
+
+// ── Modal Helpers ──
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ── Autopilot State ──
+let autopilotActive = false;
+let autopilotIntervalSeconds = 0;
+let autopilotTimeout = null;
+
+// ── Handle Autopilot Button Click ──
+function handleAutopilot() {
+  if (autopilotActive) {
+    // Already running — show Cancel/Continue modal
+    openModal('autopilotRunningModal');
+  } else {
+    // Not running — show interval setup modal
+    document.getElementById('intervalValue').value = '5';
+    document.getElementById('intervalUnit').value = 'minutes';
+    document.getElementById('intervalError').textContent = '';
+    openModal('autopilotModal');
+  }
+}
+
+// ── Confirm Autopilot Start ──
+function confirmAutopilot() {
+  const val = parseFloat(document.getElementById('intervalValue').value);
+  const unit = document.getElementById('intervalUnit').value;
+  const errorEl = document.getElementById('intervalError');
+
+  // Validate input
+  if (!val || val <= 0) {
+    errorEl.textContent = '⚠ Please enter a valid interval.';
+    return;
+  }
+
+  // Convert to seconds
+  let seconds = 0;
+  if (unit === 'seconds') seconds = val;
+  if (unit === 'minutes') seconds = val * 60;
+  if (unit === 'hours')   seconds = val * 3600;
+
+  // Max 6 hours = 21600 seconds
+  if (seconds > 21600) {
+    errorEl.textContent = '⚠ Only max of 6 hrs limit.';
+    return;
+  }
+
+  errorEl.textContent = '';
+  autopilotIntervalSeconds = seconds;
+  closeModal('autopilotModal');
+  startAutopilot();
+}
+
+// ── Start Autopilot ──
+function startAutopilot() {
+  autopilotActive = true;
+
+  // Show badge
+  document.getElementById('autopilotBadge').style.display = 'block';
+
+  // Style autopilot button as active
+  const btn = document.getElementById('autopilotBtn');
+  btn.classList.add('active');
+  btn.textContent = '🤖 Autopilot ON';
+
+  // Get all valid rows (rows that have start and end time set)
+  const validPrograms = programs.filter(p => {
+    const s = document.getElementById(`start-${p.id}`);
+    const e = document.getElementById(`end-${p.id}`);
+    return s && e && s.value && e.value;
+  });
+
+  if (validPrograms.length === 0) {
+    alert('No rows with time set. Please set start and end times first.');
+    cancelAutopilot();
+    return;
+  }
+
+  // Start the sequence
+  runAutopilotSequence(validPrograms, 0);
+}
+
+// ── Run Autopilot Sequence ──
+function runAutopilotSequence(validPrograms, index) {
+  if (!autopilotActive) return;
+  if (index >= validPrograms.length) {
+    // All rows done
+    showBanner('✅ Autopilot complete! All programmes finished.');
+    cancelAutopilot();
+    return;
+  }
+
+  const p = validPrograms[index];
+
+  // Reset this row first to make sure it starts fresh
+  resetTimer(p.id);
+
+  // Start this row's timer
+  startTimer(p.id);
+
+  // Watch for this row to finish, then trigger next
+  watchForFinish(p.id, () => {
+    if (!autopilotActive) return;
+
+    if (index + 1 >= validPrograms.length) {
+      // No more rows
+      showBanner('✅ Autopilot complete! All programmes finished.');
+      cancelAutopilot();
+      return;
+    }
+
+    // Show countdown banner for interval
+    const nextTitle = document.getElementById(`title-${validPrograms[index + 1].id}`)?.value || `Row ${index + 2}`;
+    showBanner(`⏳ Next: "${nextTitle}" starts in ${formatIntervalLabel()}...`);
+
+    // Wait interval then start next row
+    autopilotTimeout = setTimeout(() => {
+      runAutopilotSequence(validPrograms, index + 1);
+    }, autopilotIntervalSeconds * 1000);
+  });
+}
+
+// ── Watch a row until it finishes ──
+function watchForFinish(id, callback) {
+  const check = setInterval(() => {
+    const t = timers[id];
+    if (!t) { clearInterval(check); return; }
+    if (t.state === 'finished') {
+      clearInterval(check);
+      callback();
+    }
+    if (!autopilotActive) {
+      clearInterval(check);
+    }
+  }, 500);
+}
+
+// ── Format interval for display ──
+function formatIntervalLabel() {
+  const s = autopilotIntervalSeconds;
+  if (s < 60)   return `${s} second${s !== 1 ? 's' : ''}`;
+  if (s < 3600) return `${Math.round(s / 60)} minute${Math.round(s/60) !== 1 ? 's' : ''}`;
+  return `${(s / 3600).toFixed(1)} hour${s / 3600 !== 1 ? 's' : ''}`;
+}
+
+// ── Cancel Autopilot ──
+function cancelAutopilot() {
+  autopilotActive = false;
+
+  // Clear any pending timeout
+  if (autopilotTimeout) {
+    clearTimeout(autopilotTimeout);
+    autopilotTimeout = null;
+  }
+
+  // Hide badge
+  document.getElementById('autopilotBadge').style.display = 'none';
+
+  // Reset button
+  const btn = document.getElementById('autopilotBtn');
+  btn.classList.remove('active');
+  btn.textContent = '🤖 Autopilot';
+
+  // Close modal if open
+  closeModal('autopilotRunningModal');
+}
+
+  function getDurationFromRow(id) {
+    const s = document.getElementById(`start-${id}`).value;
+    const e = document.getElementById(`end-${id}`).value;
+    return calcDuration(s, e);
+  }
+
+  function onTimeChange(id) {
+    const dur = getDurationFromRow(id);
+    const durCell = document.getElementById(`dur-${id}`);
+    const t = timers[id];
+    if (durCell) {
+      durCell.textContent = dur > 0 ? `${dur} min` : '--';
+    }
+    if (t && t.state === 'idle') {
+      t.remaining = dur * 60;
+      t.warned = false;
+      const display = document.getElementById(`timer-${id}`);
+      if (display) display.textContent = dur > 0 ? formatTime(dur * 60) : '--:--';
+    }
+  }
+
+  function updateRowUI(id) {
+    const t = timers[id];
+    if (!t) return;
+
+    const row      = document.getElementById(`row-${id}`);
+    const display  = document.getElementById(`timer-${id}`);
+    const badge    = document.getElementById(`badge-${id}`);
+    const startBtn = document.getElementById(`startBtn-${id}`);
+    const pauseBtn = document.getElementById(`pauseBtn-${id}`);
+
+    if (!row || !display) return;
+
+    display.textContent = formatTime(t.remaining);
+    row.classList.remove('row-running','row-warning','row-finished','row-paused');
+    display.classList.remove('warning-text','finished-text');
+
+    if (t.state === 'finished') {
+      row.classList.add('row-finished');
+      display.classList.add('finished-text');
+      display.textContent = 'DONE';
+      badge.className = 'status-badge badge-finished';
+      badge.textContent = 'Finished';
+      startBtn.style.display = 'none';
+      pauseBtn.style.display = 'none';
+    } else if (t.state === 'warning') {
+      row.classList.add('row-warning');
+      display.classList.add('warning-text');
+      badge.className = 'status-badge badge-warning';
+      badge.textContent = '⚠ 5 Min Left';
+      startBtn.style.display = 'none';
+      pauseBtn.style.display = 'inline-block';
+    } else if (t.state === 'running') {
+      row.classList.add('row-running');
+      badge.className = 'status-badge badge-running';
+      badge.textContent = 'Running';
+      startBtn.style.display = 'none';
+      pauseBtn.style.display = 'inline-block';
+    } else if (t.state === 'paused') {
+      row.classList.add('row-paused');
+      badge.className = 'status-badge badge-paused';
+      badge.textContent = 'Paused';
+      startBtn.textContent = '▶ Resume';
+      startBtn.style.display = 'inline-block';
+      pauseBtn.style.display = 'none';
+    } else {
+      badge.className = 'status-badge badge-idle';
+      badge.textContent = 'Idle';
+      startBtn.textContent = '▶ Start';
+      startBtn.style.display = 'inline-block';
+      pauseBtn.style.display = 'none';
+    }
+  }
+
+  function startTimer(id) {
+    const t = timers[id];
+    if (!t || t.state === 'finished') return;
+
+    if (t.state === 'idle') {
+      const dur = getDurationFromRow(id);
+      if (dur <= 0) { alert('Please set a valid start and end time first.'); return; }
+      t.remaining = dur * 60;
+      t.warned = false;
+    }
+
+    t.state = t.remaining <= 300 ? 'warning' : 'running';
+
+    t.interval = setInterval(() => {
+      t.remaining--;
+
+      if (t.remaining <= 300 && !t.warned) {
+        t.warned = true;
+        t.state = 'warning';
+        const titleEl = document.getElementById(`title-${id}`);
+        const titleText = titleEl ? titleEl.value || `Row ${id}` : `Row ${id}`;
+        showBanner(`⚠️ 5 minutes left for: ${titleText}`);
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.frequency.value = 880;
+          gain.gain.setValueAtTime(0.3, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1);
+          osc.start(ctx.currentTime);
+          osc.stop(ctx.currentTime + 1);
+        } catch(e) {}
+      }
+
+      if (t.remaining <= 0) {
+        t.remaining = 0;
+        t.state = 'finished';
+        clearInterval(t.interval);
+        t.interval = null;
+        const titleEl = document.getElementById(`title-${id}`);
+        const titleText = titleEl ? titleEl.value || `Row ${id}` : `Row ${id}`;
+        showBanner(`✅ Time is up for: ${titleText}`);
+      }
+
+      updateRowUI(id);
+    }, 1000);
+
+    updateRowUI(id);
+  }
+
+  function pauseTimer(id) {
+    const t = timers[id];
+    if (!t) return;
+    if (t.interval) { clearInterval(t.interval); t.interval = null; }
+    t.state = 'paused';
+    updateRowUI(id);
+  }
+
+  function resetTimer(id) {
+    const t = timers[id];
+    if (!t) return;
+    if (t.interval) { clearInterval(t.interval); t.interval = null; }
+    const dur = getDurationFromRow(id);
+    t.remaining = dur * 60;
+    t.state = 'idle';
+    t.warned = false;
+    updateRowUI(id);
+    onTimeChange(id);
+  }
+
+  function deleteRow(id) {
+    const t = timers[id];
+    if (t && t.interval) clearInterval(t.interval);
+    delete timers[id];
+    programs = programs.filter(p => p.id !== id);
+    const row = document.getElementById(`row-${id}`);
+    if (row) row.remove();
+    renumberRows();
+  }
+
+  function renumberRows() {
+    programs.forEach((p, i) => {
+      const numCell = document.getElementById(`num-${p.id}`);
+      if (numCell) numCell.textContent = i + 1;
+    });
+  }
+
+  function renderRow(p, index) {
+    const dur = calcDuration(p.startTime, p.endTime);
+    initTimer(p.id, dur);
+
+    const tbody = document.getElementById('tableBody');
+    const tr = document.createElement('tr');
+    tr.id = `row-${p.id}`;
+    
+
+tr.innerHTML = `
+  <td id="num-${p.id}" style="color:#64748b;font-size:0.85rem;">${index + 1}</td>
+  <td data-label="Start Time"><input type="time" id="start-${p.id}" value="${p.startTime}" onchange="onTimeChange(${p.id})"/></td>
+  <td data-label="End Time"><input type="time" id="end-${p.id}" value="${p.endTime}" onchange="onTimeChange(${p.id})"/></td>
+  <td data-label="Title" class="mobile-hide"><input type="text" id="title-${p.id}" value="${p.title}" placeholder="Title"/></td>
+  <td data-label="Duration" class="mobile-hide"><span class="duration-calc" id="dur-${p.id}">${dur > 0 ? dur + ' min' : '--'}</span></td>
+  <td data-label="Timer"><span class="timer-display" id="timer-${p.id}">${dur > 0 ? formatTime(dur * 60) : '--:--'}</span></td>
+  <td data-label="Status" class="mobile-hide"><span class="status-badge badge-idle" id="badge-${p.id}">Idle</span></td>
+  <td data-label="Actions">
+    <div class="btn-group">
+      <button class="btn-start" id="startBtn-${p.id}" onclick="startTimer(${p.id})">▶ Start</button>
+      <button class="btn-pause" id="pauseBtn-${p.id}" onclick="pauseTimer(${p.id})" style="display:none">⏸ Pause</button>
+      <button class="btn-reset" onclick="resetTimer(${p.id})">↺ Reset</button>
+      <button class="btn-delete" onclick="deleteRow(${p.id})">✕</button>
+    </div>
+  </td>
+`;
+    tbody.appendChild(tr);
+  }
+
+  function addRow() {
+    const newP = { id: nextId++, startTime: "", endTime: "", title: "" };
+    programs.push(newP);
+    renderRow(newP, programs.length - 1);
+  }
+
+
+function resetAll() {
+  if (!confirm('Reset all start & end times?')) return;
+  if (autopilotActive) cancelAutopilot();
+  programs.forEach(p => {
+    const t = timers[p.id];
+    if (t) {
+      if (t.interval) { clearInterval(t.interval); t.interval = null; }
+      t.state = 'idle';
+      t.warned = false;
+      t.remaining = 0;
+    }
+    const startEl = document.getElementById(`start-${p.id}`);
+    const endEl   = document.getElementById(`end-${p.id}`);
+    const titleEl = document.getElementById(`title-${p.id}`);
+    if (startEl) startEl.value = '';
+    if (endEl)   endEl.value   = '';
+    if (titleEl) titleEl.value = '';
+    onTimeChange(p.id);
+    updateRowUI(p.id);
+  });
+}
+
+  // Init
+  defaultPrograms.forEach(p => {
+    const prog = { ...p, id: nextId++ };
+    programs.push(prog);
+    renderRow(prog, programs.length - 1);
+  });
+
+  // Register service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js')
+      .then(reg => {
+        console.log('Service Worker registered:', reg.scope);
+        // Check if install prompt is available
+        window.addEventListener('beforeinstallprompt', (e) => {
+          console.log('Install prompt available');
+          e.preventDefault();
+          // Store the event for later use
+          deferredPrompt = e;
+          // Show the install button
+document.querySelector('.btn-install').style.display = 'inline-block';
+        });
+      })
+      .catch(err => {
+        console.log('Service Worker registration failed:', err);
+      });
+  });
+}
+
+// Global variable for deferred prompt
+let deferredPrompt;
+
+// Function to trigger install
+function promptInstall() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      } else {
+        console.log('User dismissed the install prompt');
+      }
+      deferredPrompt = null;
+    });
+  } else {
+    alert('Install prompt not available. Visit the site twice and interact with it first.');
+  }
+}
+
+// Show install button after user interacts
+document.addEventListener('click', () => {
+  if (deferredPrompt && document.querySelector('.btn-install').style.display === 'none') {
+    document.querySelector('.btn-install').style.display = 'inline-block';
+  }
+});
+</script>
+
+
+
+
+</body>
+</html>
