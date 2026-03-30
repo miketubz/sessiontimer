@@ -13,23 +13,51 @@
   <style>
 
 @media (max-width: 768px) {
+
+  body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  h1, .subtitle {
+    text-align: center;
+    width: 100%;
+  }
+
   .top-bar {
     flex-direction: column;
     align-items: center;
     gap: 10px;
+    width: 100%;
   }
 
   table {
     width: 100%;
-    min-width: 100%; /* ← ADD THIS */
-    overflow-x: auto; /* ← ADD THIS */
+    min-width: 100%;
+    overflow-x: auto;
     display: block;
     font-size: 0.85rem;
   }
 
+  thead, tbody {
+    width: 100%;
+    display: block;
+  }
+
+  tbody tr {
+    width: 100%;
+    display: block;
+    margin-bottom: 12px;
+    background: #1e293b;
+    border-radius: 8px;
+    padding: 8px;
+  }
+
   th, td {
-    padding: 6px 4px; /* ← reduce padding */
-    font-size: 0.8rem; /* ← reduce font */
+    padding: 6px 4px;
+    font-size: 0.8rem;
     display: block;
     width: 100%;
     border: none;
@@ -47,13 +75,12 @@
     width: 40%;
   }
 
-.btn-add, .btn-reset-all, .btn-install, .btn-autopilot {
-  width: 100%;
-  max-width: 280px;
-  padding: 12px;
-  font-size: 0.95rem;
-}
-
+  .btn-add, .btn-reset-all, .btn-install, .btn-autopilot {
+    width: 100%;
+    max-width: 280px;
+    padding: 12px;
+    font-size: 0.95rem;
+  }
 
   .timer-display {
     font-size: 1rem;
@@ -76,14 +103,15 @@
 
   .btn-start, .btn-pause, .btn-reset, .btn-delete {
     width: 100%;
-    padding: 4px; /* ← reduce */
-    font-size: 0.75rem; /* ← reduce */
+    padding: 4px;
+    font-size: 0.75rem;
   }
 
-.mobile-hide {
-  display: none;
-}
-}
+  .mobile-hide {
+    display: none;
+  }
+
+} /* ← END of first media query */
 
 /* ── Autopilot Button ── */
 .btn-autopilot {
